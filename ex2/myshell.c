@@ -4,6 +4,7 @@
 #include <sys/wait.h>
 #include <string.h>
 #include <fcntl.h>
+#include <errno.h>
 
 
 int regular_process(char **arglist);
@@ -46,7 +47,13 @@ int regular_process(char **arglist)
     else
     {
         /*parent process*/
-        waitpid(pid, NULL, 0);
+        if (waitpid(pid, NULL, 0) == -1 && errno != ECHILD && errno != EINTR)
+        {
+            /*if wait fails, it is an error in the parent process and we want to return 0*/
+            /*what is the expected behavior?????*/
+            perror("Wait failed");
+            return 0;
+        }
     }
     return 1;
 }
@@ -190,8 +197,19 @@ int pipe_process(char **arglist, int pipe_index)
                 perror("Failed close in parent");
                 return 0;
             }
-            waitpid(pid, NULL, 0);
-            waitpid(pid2,NULL,0);
+
+            /*if wait fails, it is an error in the parent process and we want to return 0*/
+            /*what is the expected behavior?????*/
+            if (waitpid(pid, NULL, 0) == -1 && errno != ECHILD && errno != EINTR)
+            {
+                perror("Wait failed");
+                return 0;
+            }
+            if (waitpid(pid2, NULL, 0) == -1 && errno != ECHILD && errno != EINTR)
+            {
+                perror("Wait failed");
+                return 0;
+            }
         }   
     }
     return 1;
@@ -264,7 +282,13 @@ int redirection_process(int count, char **arglist)
     else
     {
         /*parent process*/
-        waitpid(pid, NULL, 0);
+        if (waitpid(pid, NULL, 0) == -1 && errno != ECHILD && errno != EINTR)
+        {
+            /*if wait fails, it is an error in the parent process and we want to return 0*/
+            /*what is the expected behavior?????*/
+            perror("Wait failed");
+            return 0;
+        }
     }
     return 1;
 }
