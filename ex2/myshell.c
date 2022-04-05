@@ -112,7 +112,7 @@ int pipe_process(char **arglist, int pipe_index)
             perror("Signal failed in child process");
             exit(1);
         }
-        if (close(pipefd[0]) == -1)
+        if (close(pipefd[0]) == -1) /*close read side of the pipe*/
         {
             perror("Failed close");
             exit(1);
@@ -155,7 +155,7 @@ int pipe_process(char **arglist, int pipe_index)
                 perror("Signal failed in child process");
                 exit(1);
             }
-            if (close(pipefd[1]) == -1)
+            if (close(pipefd[1]) == -1) /*close write side of the pipe*/
             {
                 perror("Failed close");
                 exit(1);
@@ -195,7 +195,6 @@ int pipe_process(char **arglist, int pipe_index)
         }   
     }
     return 1;
-    
 }
 
 /*returns the | symbol's index if exist in arglist, otherwise returns -1.*/
@@ -234,7 +233,7 @@ int redirection_process(int count, char **arglist)
         /*if an error occurs in a child process we want to print an error message,
         and terminate only the child process using exit(1).*/
 
-        if (signal(SIGINT, SIG_DFL) == -1) /*make child process to default handle of SIGINT*/
+        if (signal(SIGINT, SIG_DFL) == SIG_ERR) /*make child process to default handle of SIGINT*/
         {
             /*is this ok????????????????*/
             perror("Signal failed in child process");
@@ -280,12 +279,12 @@ int prepare(void)
 
     if (signal(SIGINT, SIG_IGN) == SIG_ERR) /*make process ignore SIGINT*/
     {
-        perror("Error in signal handler");
+        perror("Error in signal handler in the shell");
         exit(1);
     }
     if (signal(SIGCHLD, SIG_IGN) == SIG_ERR) /*handling zombies??????????????????????????????*/
     {
-        perror("Error in signal handler");
+        perror("Error in signal handler in the shell");
         exit(1); 
     }
     return 0;
@@ -295,6 +294,7 @@ int prepare(void)
 int process_arglist(int count, char **arglist)
 {
     int pipe_ind = -1; /*this will be the index of the | if it exist*/
+
     /*checks background*/
     if (strcmp(arglist[count - 1], "&") == 0)
     {
@@ -311,7 +311,6 @@ int process_arglist(int count, char **arglist)
         {
             return pipe_process(arglist, pipe_ind);
         }
-
     /*else, regular*/
     return regular_process(arglist);
 }
