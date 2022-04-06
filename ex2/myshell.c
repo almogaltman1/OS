@@ -251,7 +251,7 @@ int redirection_process(int count, char **arglist)
             perror("Signal failed in child process");
             exit(1);
         }
-        fd = open(file_name, O_CREAT | O_APPEND | O_RDWR, 666);
+        fd = open(file_name, O_CREAT | O_APPEND | O_RDWR, S_IRUSR | S_IWUSR);
         if (fd == -1)
         {
             perror("Failed opening file");
