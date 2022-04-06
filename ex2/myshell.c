@@ -34,7 +34,6 @@ int regular_process(char **arglist)
 
         if (signal(SIGINT, SIG_DFL) == SIG_ERR) /*make child process to default handle of SIGINT*/
         {
-            /*is this ok????????????????*/
             perror("Signal failed in child process");
             exit(1);
         }
@@ -50,7 +49,6 @@ int regular_process(char **arglist)
         if (waitpid(pid, NULL, 0) == -1 && errno != ECHILD && errno != EINTR)
         {
             /*if wait fails, it is an error in the parent process and we want to return 0*/
-            /*what is the expected behavior?????*/
             perror("Wait failed");
             return 0;
         }
@@ -115,7 +113,6 @@ int pipe_process(char **arglist, int pipe_index)
 
         if (signal(SIGINT, SIG_DFL) == SIG_ERR) /*make child process to default handle of SIGINT*/
         {
-            /*is this ok????????????????*/
             perror("Signal failed in child process");
             exit(1);
         }
@@ -158,7 +155,6 @@ int pipe_process(char **arglist, int pipe_index)
 
             if (signal(SIGINT, SIG_DFL) == SIG_ERR) /*make child process to default handle of SIGINT*/
             {
-                /*is this ok????????????????*/
                 perror("Signal failed in child process");
                 exit(1);
             }
@@ -199,7 +195,6 @@ int pipe_process(char **arglist, int pipe_index)
             }
 
             /*if wait fails, it is an error in the parent process and we want to return 0*/
-            /*what is the expected behavior?????*/
             if (waitpid(pid, NULL, 0) == -1 && errno != ECHILD && errno != EINTR)
             {
                 perror("Wait failed");
@@ -253,7 +248,6 @@ int redirection_process(int count, char **arglist)
 
         if (signal(SIGINT, SIG_DFL) == SIG_ERR) /*make child process to default handle of SIGINT*/
         {
-            /*is this ok????????????????*/
             perror("Signal failed in child process");
             exit(1);
         }
@@ -285,7 +279,6 @@ int redirection_process(int count, char **arglist)
         if (waitpid(pid, NULL, 0) == -1 && errno != ECHILD && errno != EINTR)
         {
             /*if wait fails, it is an error in the parent process and we want to return 0*/
-            /*what is the expected behavior?????*/
             perror("Wait failed");
             return 0;
         }
@@ -306,7 +299,7 @@ int prepare(void)
         perror("Error in signal handler in the shell");
         exit(1);
     }
-    if (signal(SIGCHLD, SIG_IGN) == SIG_ERR) /*handling zombies??????????????????????????????*/
+    if (signal(SIGCHLD, SIG_IGN) == SIG_ERR) /*handling zombies*/
     {
         perror("Error in signal handler in the shell");
         exit(1); 
