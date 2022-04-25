@@ -9,7 +9,7 @@
 #include <linux/fs.h>       /* for register_chrdev */
 #include <linux/uaccess.h>  /* for get_user and put_user */
 #include <linux/string.h>   /* for memset. NOTE - not string.h!*/
-#include <linux/slab.h>     /* for GFP_KERNEL flag in kalloc*/
+#include <linux/slab.h>     /* for GFP_KERNEL flag in kmalloc*/
 
 #include "message_slot.h"   /* our h file*/
 
@@ -48,7 +48,7 @@ static int device_open(struct inode* inode, struct file* file)
     is this ok to not do anything???*/
     if (message_devices[minor] == NULL)
     {
-        ms_info = kalloc(sizeof(message_slot_file_info), GFP_KERNEL);
+        ms_info = kmalloc(sizeof(message_slot_file_info), GFP_KERNEL);
         ms_info->curr_channel = NULL;
         ms_info->head_channel_list = NULL;
         ms_info->minor = minor;
@@ -125,7 +125,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     }
 
     /*this is the first channel we make or we dowsent have this channel*/
-    ch = kalloc(sizeof(channel), GFP_KERNEL);
+    ch = kmalloc(sizeof(channel), GFP_KERNEL);
     ch->ch_id = ioctl_param;
     ch->curr_message_size = 0;
     ch->next = NULL;
