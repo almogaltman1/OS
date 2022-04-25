@@ -155,10 +155,10 @@ static int __init simple_init(void)
 {
     int rc = -1;
 
-    // Register driver capabilities. Obtain major num
+    /*Register driver capabilities. Obtain major num*/
     rc = register_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME, &Fops);
 
-    // Negative values signify an error
+    /*Negative values signify an error*/
     if (rc < 0) 
     {
         printk(KERN_ERR "%s registraion failed for  %d\n", DEVICE_RANGE_NAME, MAJOR_NUM); /*this message exactly?????????????????*/
@@ -170,7 +170,7 @@ static int __init simple_init(void)
     return SUCCESS;
 }
 
-/*Clean the module - unRrgister the character device and free all memory*/
+/*Clean the module - unregister the character device and free all memory*/
 static void __exit simple_cleanup(void)
 {
     /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
