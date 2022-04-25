@@ -180,15 +180,18 @@ static void __exit simple_cleanup(void)
     for (i=0; i < 256; i++)
     {
         ms_info = message_devices[i];
-        ch = ms_info->head_channel_list;
-        while (ch != NULL)
+        if (ms_info != NULL)
         {
-            temp = ch;
-            ch = temp->next;
-            kfree(temp);
-        }
+            ch = ms_info->head_channel_list;
+            while (ch != NULL)
+            {
+                temp = ch;
+                ch = temp->next;
+                kfree(temp);
+            }
 
-        kfree(ms_info);
+            kfree(ms_info);
+        }
     }
 
     // Unregister the device
