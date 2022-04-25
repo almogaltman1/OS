@@ -8,10 +8,10 @@
 #include <linux/module.h>   /* Specifically, a module */
 #include <linux/fs.h>       /* for register_chrdev */
 #include <linux/uaccess.h>  /* for get_user and put_user */
-#include <linux/string.h>   /* for memset. NOTE - not string.h!*/
-#include <linux/slab.h>     /* for GFP_KERNEL flag in kmalloc*/
+#include <linux/string.h>   /* for memset. NOTE - not string.h! */
+#include <linux/slab.h>     /* for GFP_KERNEL flag in kmalloc */
 
-#include "message_slot.h"   /* our h file*/
+#include "message_slot.h"   /* our h file */
 
 MODULE_LICENSE("GPL");
 
@@ -41,7 +41,7 @@ static int device_open(struct inode* inode, struct file* file)
     /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
     message_slot_file_info *ms_info; /*maybe delete??????????*/
     int minor = iminor(inode);
-    printk("Invoking device_open(%p)\n", file); /*maybe delete??????????*/
+    printk("Invoking device open\n"); /*maybe delete??????????*/
 
 
     /*what to do if we allready have this minor?????????????????????????????????
@@ -79,8 +79,9 @@ static int device_release(struct inode* inode, struct file* file)
 static ssize_t device_read(struct file* file, char __user* buffer, size_t length, loff_t* offset)
 {
     /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-    // return the number of input characters used
     int i = 0;
+
+    /*return the number of input characters that were read*/
     return i;
 }
 
@@ -88,9 +89,9 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 {
     /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
     int i = 0;
-    printk("Invoking device_write\n"); /*maybe delete??????????*/
+    printk("Invoking device write\n"); /*maybe delete??????????*/
 
-    // return the number of input characters used
+    /*return the number of input characters that were written*/
     return i;
 }
 
@@ -104,7 +105,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
         return -EINVAL;
     }
 
-    printk("Invoking ioctl: setting channel id to %ld\n", ioctl_param);
+    printk("Invoking device ioctl: set channel id to %ld\n", ioctl_param);
     ms_info = (message_slot_file_info *)file->private_data;
     ch = ms_info->head_channel_list;
 
@@ -137,8 +138,8 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
 
 
 /*device setup - all declarations and the struct like we saw in recitation*/
-// This structure will hold the functions to be called
-// when a process does something to the device we created
+/*This structure will hold the functions to be called
+when a process does something to the device we created*/
 struct file_operations Fops =
 {
     .owner = THIS_MODULE, 
@@ -149,7 +150,7 @@ struct file_operations Fops =
     .release = device_release,
 };
 
-// Initialize the module - Register the character device
+/*Initialize the module - Register the character device*/
 static int __init simple_init(void)
 {
     int rc = -1;
@@ -169,11 +170,11 @@ static int __init simple_init(void)
     return SUCCESS;
 }
 
-
+/*Clean the module - unRrgister the character device and free all memory*/
 static void __exit simple_cleanup(void)
 {
     /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-    // free all memory
+    /*free all memory*/
    int i;
     message_slot_file_info *ms_info;
     channel *ch, *temp;
@@ -194,10 +195,9 @@ static void __exit simple_cleanup(void)
         }
     }
 
-    // Unregister the device
-    // Should always succeed
+    /*Unregister the device - should always succeed*/
     unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
-    printk("exit successful\n");
+    printk("Exit successful\n");
 }
 
 
