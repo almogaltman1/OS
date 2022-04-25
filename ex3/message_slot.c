@@ -123,7 +123,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
             ch = ch->next;
         }
     }
-    
+
     /*this is the first channel we make or we dowsent have this channel*/
     ch = kalloc(sizeof(channel), GFP_KERNEL);
     ch->ch_id = ioctl_param;
@@ -173,10 +173,28 @@ static int __init simple_init(void)
 static void __exit simple_cleanup(void)
 {
     /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+    // free all memory
+   int i;
+    message_slot_file_info *ms_info;
+    channel *ch, *temp;
+    for (i=0; i < 256; i++)
+    {
+        ms_info = message_devices[i];
+        ch = ms_info->head_channel_list;
+        while (ch != NULL)
+        {
+            temp = ch;
+            ch = temp->next;
+            kfree(temp);
+        }
+
+        kfree(ms_info);
+    }
+
     // Unregister the device
     // Should always succeed
-    printk("exit successful\n");
     unregister_chrdev(MAJOR_NUM, DEVICE_RANGE_NAME);
+    printk("exit successful\n");
 }
 
 
