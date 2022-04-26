@@ -91,7 +91,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
         /*no channel has been set*/
         return -EINVAL;
     }
-    if (curr_ch->curr_message_size = 0)
+    if (curr_ch->curr_message_size == 0)
     {
         /*no message exists on the channel*/
         return -EWOULDBLOCK;
