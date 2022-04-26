@@ -18,7 +18,7 @@ MODULE_LICENSE("GPL");
 typedef struct channel
 {
     unsigned long ch_id;
-    char message[BUF_LEN];
+    char *message;
     int curr_message_size;  /*is needed???????????????*/
     struct channel *next;
 } channel;
@@ -88,8 +88,53 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset)
 {
     /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-    int i = 0;
+    int i;
+    message_slot_file_info *ms_info;
+    channel *curr_ch;
+    char message_buf[BUF_LEN];
+    char *new_message;
     printk("Invoking device write\n"); /*maybe delete??????????*/
+
+    ms_info = (message_slot_file_info *)file->private_data;
+    curr_ch = ms_info->curr_channel;
+    if (curr_ch == NULL)
+    {
+        /*no channel has been set*/
+        return -EINVAL;
+    }
+    if (length == 0 || length > BUF_LEN)
+    {
+        return -EMSGSIZE;
+    }
+
+    /*try read the message to temp buffer, temp buffer so writing will be atomic*/
+    for (i = 0; i < length; i++)
+    {
+        if (get_user(message_buf[i], &buffer[i]) != 0)
+        {
+            /*problem in the input*/
+            return -EIO;
+        }
+    }
+
+    /*succeeded reading, allocate new space for new message*/
+    new_message = kmalloc(sizeof(char)*length, GFP_KERNEL);
+    if (new_message == NULL)
+    {
+        return -ENOMEM;
+    }
+
+    /*free old message if exist*/
+    if (curr_ch->curr_message_size != 0)
+    {
+        kfree(curr_ch->message);
+    }
+    /*update message fields to current message*/
+    curr_ch->curr_message_size = length;
+    for (i = 0; i < length; i++)
+    {
+        curr_ch->message[i] = message_buf[i];
+    }
 
     /*return the number of input characters that were written*/
     return i;
@@ -109,26 +154,24 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     ms_info = (message_slot_file_info *)file->private_data;
     ch = ms_info->head_channel_list;
 
-    if (ch != NULL)
+    /*need to find the channel*/
+    while (ch != NULL)
     {
-        /*need to find the channel*/
-        while (ch != NULL)
+        if (ch->ch_id == ioctl_param)
         {
-            if (ch->ch_id == ioctl_param)
-            {
-                /*this is the rellevant channel*/
-                ms_info->curr_channel = ch;
-                file->private_data = (void *)ms_info; /*is that needed??????????????*/
-                return SUCCESS;
-            }
-            ch = ch->next;
+            /*this is the relevant channel*/
+            ms_info->curr_channel = ch;
+            file->private_data = (void *)ms_info; /*is that needed??????????????*/
+            return SUCCESS;
         }
+        ch = ch->next;
     }
 
-    /*this is the first channel we make or we dowsent have this channel*/
+    /*this is the first channel we make or we dosen't have this channel id*/
     ch = kmalloc(sizeof(channel), GFP_KERNEL);
     ch->ch_id = ioctl_param;
     ch->curr_message_size = 0;
+    ch->message = NULL;
     ch->next = NULL;
     ms_info->curr_channel = ch;
     file->private_data = (void *)ms_info; /*is that needed??????????????*/
