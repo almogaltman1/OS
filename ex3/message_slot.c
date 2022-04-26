@@ -133,8 +133,9 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     curr_ch->curr_message_size = length;
     for (i = 0; i < length; i++)
     {
-        curr_ch->message[i] = message_buf[i];
+        new_message[i] = message_buf[i];
     }
+    curr_ch->message = new_message;
 
     /*return the number of input characters that were written*/
     return i;
@@ -174,6 +175,11 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     ch->message = NULL;
     ch->next = NULL;
     ms_info->curr_channel = ch;
+    if (ms_info->head_channel_list == NULL)
+    {
+        /*first channel*/
+        ms_info->head_channel_list = ch;
+    }
     file->private_data = (void *)ms_info; /*is that needed??????????????*/
     return SUCCESS;
 }
