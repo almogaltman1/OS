@@ -13,6 +13,7 @@ int main(int argc, char *argv[])
     int ch_id; /*is it int????????????????*/
     char message[BUF_LEN];
     int fd, message_len;
+    int i;
 
     if (argc != 3) /*2 arguments + path of program*/
     {
@@ -34,15 +35,22 @@ int main(int argc, char *argv[])
         exit(1);
     }
  
-
-    /*now complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-    message_len = strlen(message); /*doesn't count the null characte, so we will not wirte it*/
-    if (write(fd, message, message_len) != message_len)
+    /*read the message*/
+    message_len = read(fd, message, BUF_LEN);
+    if (message_len < 0) /*what to check?????*/
     {
-        perror("Writing failed\n");
+        perror("Reading failed\n");
         exit(1);
     }
 
     close(fd);
+
+    /*print to stdout*/
+   if (write(1, message, message_len) != message_len)
+   {
+       perror("Print to standart output failed\n");
+        exit(1);
+   }   
+
     return 0;
 }
