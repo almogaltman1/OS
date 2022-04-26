@@ -13,7 +13,6 @@ int main(int argc, char *argv[])
     int ch_id; /*is it int????????????????*/
     char message[BUF_LEN];
     int fd, message_len;
-    int i;
 
     if (argc != 3) /*2 arguments + path of program*/
     {
