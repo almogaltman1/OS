@@ -80,6 +80,36 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 {
     /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
     int i = 0;
+    message_slot_file_info *ms_info;
+    channel *curr_ch;
+    char *curr_message;
+
+    ms_info = (message_slot_file_info *)file->private_data;
+    curr_ch = ms_info->curr_channel;
+    if (curr_ch == NULL)
+    {
+        /*no channel has been set*/
+        return -EINVAL;
+    }
+    if (curr_ch->curr_message_size = 0)
+    {
+        /*no message exists on the channel*/
+        return -EWOULDBLOCK;
+    }
+    if (length < curr_ch->curr_message_size)
+    {
+        /*buffer is too small*/
+        return -ENOSPC;
+    }
+
+    curr_message = curr_ch->message;
+    for (i = 0; i < curr_ch->curr_message_size; i++)
+    {
+        if (put_user(curr_message[i], &buffer[i]) != 0)
+        {
+            return -EIO;
+        }
+    }
 
     /*return the number of input characters that were read*/
     return i;

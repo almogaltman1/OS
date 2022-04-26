@@ -10,7 +10,7 @@
 
 int main(int argc, char *argv[])
 {
-    unsigned long ch_id;
+    int ch_id; /*is it int????????????????*/
     char *message;
     int fd, message_len;
 
@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     }
 
     ch_id = atoi(argv[2]); /*not good need to be replace?????????????????????*/
-    if (ioctl(fd, MSG_SLOT_CHANNEL, ch_id) != 0)
+    if (ioctl(fd, MSG_SLOT_CHANNEL, ch_id) != SUCCESS)
     {
         perror("Change channel failed\n");
         exit(1);
