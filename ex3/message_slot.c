@@ -79,10 +79,11 @@ static int device_release(struct inode* inode, struct file* file)
 static ssize_t device_read(struct file* file, char __user* buffer, size_t length, loff_t* offset)
 {
     /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-    int i = 0;
+    int i;
     message_slot_file_info *ms_info;
     channel *curr_ch;
     char *curr_message;
+    printk("Invoking device read\n"); /*maybe delete??????????*/
 
     ms_info = (message_slot_file_info *)file->private_data;
     curr_ch = ms_info->curr_channel;
