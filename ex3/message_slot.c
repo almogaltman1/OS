@@ -175,7 +175,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long  ioctl_param)
 {
     message_slot_file_info *ms_info;
-    channel *ch = NULL, ch_prev= NULL, temp = NULL;
+    channel *ch = NULL, *ch_prev= NULL, *temp = NULL;
 
     if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0)
     {
