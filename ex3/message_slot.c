@@ -175,7 +175,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long  ioctl_param)
 {
     message_slot_file_info *ms_info;
-    channel *ch, temp;
+    channel *ch = NULL, ch_prev= NULL, temp = NULL;
 
     if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0)
     {
@@ -187,20 +187,18 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     ch = ms_info->head_channel_list;
 
     /*need to find the channel*/
-    if (ch != NULL)
+    while (ch != NULL)
     {
-        while (ch->next != NULL)
+        if (ch->ch_id == ioctl_param)
         {
-            ch = ch->next;
-            if (ch->ch_id == ioctl_param)
-            {
-                /*this is the relevant channel*/
-                ms_info->curr_channel = ch;
-                file->private_data = (void *)ms_info; /*is that needed??????????????*/
-                return SUCCESS;
-            }
+            /*this is the relevant channel*/
+            ms_info->curr_channel = ch;
+            file->private_data = (void *)ms_info; /*is that needed??????????????*/
+            return SUCCESS;
         }
-    }    
+        ch_prev = ch;
+        ch = ch->next;
+    }  
 
     /*this is the first channel we make or we dosen't have this channel id*/
     temp = kmalloc(sizeof(channel), GFP_KERNEL);
@@ -209,7 +207,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     temp->message = NULL;
     temp->next = NULL;
     ms_info->curr_channel = temp;
-    if (ch == NULL)
+    if (ch_prev == NULL)
     {
         /*this is the first channel*/
         ms_info->head_channel_list = temp;
@@ -217,7 +215,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     else
     {
         /*connect the new channel to the list*/
-        ch->next = temp;
+        ch_prev->next = temp;
     }
     file->private_data = (void *)ms_info; /*is that needed??????????????*/
     return SUCCESS;
