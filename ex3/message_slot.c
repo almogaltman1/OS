@@ -175,7 +175,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long  ioctl_param)
 {
     message_slot_file_info *ms_info;
-    channel *ch;
+    channel *ch, temp;
 
     if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0)
     {
@@ -187,29 +187,37 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
     ch = ms_info->head_channel_list;
 
     /*need to find the channel*/
-    while (ch != NULL)
+    if (ch != NULL)
     {
-        if (ch->ch_id == ioctl_param)
+        while (ch->next != NULL)
         {
-            /*this is the relevant channel*/
-            ms_info->curr_channel = ch;
-            file->private_data = (void *)ms_info; /*is that needed??????????????*/
-            return SUCCESS;
+            ch = ch->next;
+            if (ch->ch_id == ioctl_param)
+            {
+                /*this is the relevant channel*/
+                ms_info->curr_channel = ch;
+                file->private_data = (void *)ms_info; /*is that needed??????????????*/
+                return SUCCESS;
+            }
         }
-        ch = ch->next;
-    }
+    }    
 
     /*this is the first channel we make or we dosen't have this channel id*/
-    ch = kmalloc(sizeof(channel), GFP_KERNEL);
-    ch->ch_id = ioctl_param;
-    ch->curr_message_size = 0;
-    ch->message = NULL;
-    ch->next = NULL;
-    ms_info->curr_channel = ch;
-    if (ms_info->head_channel_list == NULL)
+    temp = kmalloc(sizeof(channel), GFP_KERNEL);
+    temp->ch_id = ioctl_param;
+    temp->curr_message_size = 0;
+    temp->message = NULL;
+    temp->next = NULL;
+    ms_info->curr_channel = temp;
+    if (ch == NULL)
     {
-        /*first channel*/
-        ms_info->head_channel_list = ch;
+        /*this is the first channel*/
+        ms_info->head_channel_list = temp;
+    }
+    else
+    {
+        /*connect the new channel to the list*/
+        ch->next = temp;
     }
     file->private_data = (void *)ms_info; /*is that needed??????????????*/
     return SUCCESS;
