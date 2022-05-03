@@ -25,7 +25,7 @@ int main(int argc, char *argv[])
     fd = open(argv[1], O_RDONLY);
     if (fd < 0)
     {
-        perror("Can not open device");
+        perror("Can't open device");
         exit(1);
     }
 
