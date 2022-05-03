@@ -99,7 +99,7 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
     {
         if (put_user(curr_message[i], &buffer[i]) != 0)
         {
-            return -EIO;
+            return -EINVAL;
         }
     }
 
@@ -134,7 +134,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     {
         if (get_user(message_buf[i], &buffer[i]) != 0)
         {
-            return -EIO;
+            return -EINVAL;
         }
     }
 
