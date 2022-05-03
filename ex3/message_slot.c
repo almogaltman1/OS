@@ -25,8 +25,6 @@ typedef struct channel
 
 typedef struct message_slot_file_info
 {
-    /*int minor;*/ /*is needed???????????????*/
-    /*unsigned long curr_ch_id;*/ /*is needed???????????????*/
     channel *curr_channel;  
     channel *head_channel_list;
 } message_slot_file_info;
@@ -52,7 +50,6 @@ static int device_open(struct inode* inode, struct file* file)
         }
         ms_info->curr_channel = NULL;
         ms_info->head_channel_list = NULL;
-        /*ms_info->minor = minor;*/
 
         file->private_data = (void *)ms_info;
         message_devices[minor] = ms_info;    
@@ -70,17 +67,6 @@ static int device_open(struct inode* inode, struct file* file)
 
     return SUCCESS;
 }
-
-/*is it needed??????????????????*/
-//static int device_release(struct inode* inode, struct file* file)
-//{
-    /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-    /*is really here?????*/
-
-    /*free all device channels*/
-
-//   return SUCCESS;
-//}
 
 static ssize_t device_read(struct file* file, char __user* buffer, size_t length, loff_t* offset)
 {
@@ -198,7 +184,6 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
         {
             /*this is the relevant channel*/
             ms_info->curr_channel = ch;
-            /*file->private_data = (void *)ms_info;*/ /*is that needed??????????????*/
             return SUCCESS;
         }
         ch_prev = ch;
@@ -227,7 +212,6 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
         /*connect the new channel to the list*/
         ch_prev->next = temp;
     }
-    /*file->private_data = (void *)ms_info;*/ /*is that needed??????????????*/
     return SUCCESS;
 }
 
@@ -243,7 +227,6 @@ struct file_operations Fops =
     .write = device_write,
     .open = device_open,
     .unlocked_ioctl = device_ioctl,
-    //.release = device_release,
 };
 
 /*Initialize the module - Register the character device*/
