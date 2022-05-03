@@ -11,7 +11,7 @@
 #include <linux/string.h>   /* for memset. NOTE - not string.h! */
 #include <linux/slab.h>     /* for GFP_KERNEL flag in kmalloc */
 
-#include "message_slot.h"   /* our h file */
+#include "message_slot.h"   
 
 MODULE_LICENSE("GPL");
 
@@ -19,13 +19,13 @@ typedef struct channel
 {
     unsigned long ch_id;
     char *message;
-    int curr_message_size;  /*is needed???????????????*/
+    int curr_message_size;
     struct channel *next;
 } channel;
 
 typedef struct message_slot_file_info
 {
-    int minor; /*is needed???????????????*/
+    /*int minor;*/ /*is needed???????????????*/
     /*unsigned long curr_ch_id;*/ /*is needed???????????????*/
     channel *curr_channel;  
     channel *head_channel_list;
@@ -38,52 +38,57 @@ static message_slot_file_info *message_devices[256];
 /*device functions - all declarations like we saw in recitation*/
 static int device_open(struct inode* inode, struct file* file)
 {
-    /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-    message_slot_file_info *ms_info; /*maybe delete??????????*/
+    message_slot_file_info *ms_info = NULL;
     int minor = iminor(inode);
-    printk("Invoking device open\n"); /*maybe delete??????????*/
+    printk("Invoking device open\n");
 
-
-    /*what to do if we allready have this minor?????????????????????????????????
-    is this ok to not do anything???*/
     if (message_devices[minor] == NULL)
     {
         ms_info = kmalloc(sizeof(message_slot_file_info), GFP_KERNEL);
+        if (ms_info == NULL)
+        {
+            printk("Allocation of new message slot failed\n");
+            return -ENOMEM;
+        }
         ms_info->curr_channel = NULL;
         ms_info->head_channel_list = NULL;
-        ms_info->minor = minor;
+        /*ms_info->minor = minor;*/
 
         file->private_data = (void *)ms_info;
-        message_devices[minor] = ms_info; /*like this ?????????????????????????*/    
+        message_devices[minor] = ms_info;    
     }
     else
     {
-        /*is this ok????????????????*/
-        file->private_data = (void *)message_devices[minor];
+        /*take the previous data of this minor.
+        according to eran, curr_channel must be NULL in every open.
+        this is because file->private_data is set to NULL in every open,
+        but I didn't save in file->private_data the current channel id, so I set to NULL by my own.*/
+        ms_info = message_devices[minor];
+        ms_info->curr_channel = NULL;
+        file->private_data = (void *)ms_info;
     }
 
     return SUCCESS;
 }
 
 /*is it needed??????????????????*/
-static int device_release(struct inode* inode, struct file* file)
-{
+//static int device_release(struct inode* inode, struct file* file)
+//{
     /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
     /*is really here?????*/
 
     /*free all device channels*/
 
-    return SUCCESS;
-}
+//   return SUCCESS;
+//}
 
 static ssize_t device_read(struct file* file, char __user* buffer, size_t length, loff_t* offset)
 {
-    /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-    int i;
-    message_slot_file_info *ms_info;
-    channel *curr_ch;
-    char *curr_message;
-    printk("Invoking device read\n"); /*maybe delete??????????*/
+    int i = 0;
+    message_slot_file_info *ms_info = NULL;
+    channel *curr_ch = NULL;
+    char *curr_message = NULL;
+    printk("Invoking device read\n");
 
     ms_info = (message_slot_file_info *)file->private_data;
     curr_ch = ms_info->curr_channel;
@@ -118,13 +123,12 @@ static ssize_t device_read(struct file* file, char __user* buffer, size_t length
 
 static ssize_t device_write(struct file* file, const char __user* buffer, size_t length, loff_t* offset)
 {
-    /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-    int i;
-    message_slot_file_info *ms_info;
-    channel *curr_ch;
+    int i = 0;
+    message_slot_file_info *ms_info = NULL;
+    channel *curr_ch = NULL;
     char message_buf[BUF_LEN];
-    char *new_message;
-    printk("Invoking device write\n"); /*maybe delete??????????*/
+    char *new_message = NULL;
+    printk("Invoking device write\n");
 
     ms_info = (message_slot_file_info *)file->private_data;
     curr_ch = ms_info->curr_channel;
@@ -138,12 +142,12 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
         return -EMSGSIZE;
     }
 
-    /*try read the message to temp buffer, temp buffer so writing will be atomic*/
+    /*try read the message to temp buffer,
+    temp buffer so writing will be atomic and curr_message will not be destroyed*/
     for (i = 0; i < length; i++)
     {
         if (get_user(message_buf[i], &buffer[i]) != 0)
         {
-            /*problem in the input*/
             return -EIO;
         }
     }
@@ -152,6 +156,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
     new_message = kmalloc(sizeof(char)*length, GFP_KERNEL);
     if (new_message == NULL)
     {
+        printk("Allocation of new message in device write failed\n");
         return -ENOMEM;
     }
 
@@ -174,7 +179,7 @@ static ssize_t device_write(struct file* file, const char __user* buffer, size_t
 
 static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsigned long  ioctl_param)
 {
-    message_slot_file_info *ms_info;
+    message_slot_file_info *ms_info = NULL;
     channel *ch = NULL, *ch_prev= NULL, *temp = NULL;
 
     if (ioctl_command_id != MSG_SLOT_CHANNEL || ioctl_param == 0)
@@ -193,7 +198,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
         {
             /*this is the relevant channel*/
             ms_info->curr_channel = ch;
-            file->private_data = (void *)ms_info; /*is that needed??????????????*/
+            /*file->private_data = (void *)ms_info;*/ /*is that needed??????????????*/
             return SUCCESS;
         }
         ch_prev = ch;
@@ -202,6 +207,11 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
 
     /*this is the first channel we make or we dosen't have this channel id*/
     temp = kmalloc(sizeof(channel), GFP_KERNEL);
+    if (temp == NULL)
+    {
+        printk("Allocation of new channel failed\n");
+        return -ENOMEM;
+    }
     temp->ch_id = ioctl_param;
     temp->curr_message_size = 0;
     temp->message = NULL;
@@ -217,7 +227,7 @@ static long device_ioctl(struct file* file, unsigned int ioctl_command_id, unsig
         /*connect the new channel to the list*/
         ch_prev->next = temp;
     }
-    file->private_data = (void *)ms_info; /*is that needed??????????????*/
+    /*file->private_data = (void *)ms_info;*/ /*is that needed??????????????*/
     return SUCCESS;
 }
 
@@ -233,7 +243,7 @@ struct file_operations Fops =
     .write = device_write,
     .open = device_open,
     .unlocked_ioctl = device_ioctl,
-    .release = device_release,
+    //.release = device_release,
 };
 
 /*Initialize the module - Register the character device*/
@@ -247,11 +257,10 @@ static int __init simple_init(void)
     /*Negative values signify an error*/
     if (rc < 0) 
     {
-        printk(KERN_ERR "%s registraion failed for  %d\n", DEVICE_RANGE_NAME, MAJOR_NUM); /*this message exactly?????????????????*/
+        printk(KERN_ERR "%s registraion failed for  %d\n", DEVICE_RANGE_NAME, MAJOR_NUM);
         return rc;
     }
 
-    /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
     printk("Registeration is successful.\n");
     return SUCCESS;
 }
@@ -259,12 +268,11 @@ static int __init simple_init(void)
 /*Clean the module - unregister the character device and free all memory*/
 static void __exit simple_cleanup(void)
 {
-    /*complete!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
     /*free all memory*/
-   int i;
-    message_slot_file_info *ms_info;
-    channel *ch, *temp;
-    for (i=0; i < 256; i++)
+   int i = 0;
+    message_slot_file_info *ms_info = NULL;
+    channel *ch = NULL, *temp = NULL;
+    for (i = 0; i < 256; i++)
     {
         ms_info = message_devices[i];
         if (ms_info != NULL)

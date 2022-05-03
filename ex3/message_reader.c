@@ -7,15 +7,17 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
 
 int main(int argc, char *argv[])
 {
-    int ch_id; /*is it int????????????????*/
+    int ch_id;
     char message[BUF_LEN];
     int fd, message_len;
 
     if (argc != 3) /*2 arguments + path of program*/
     {
+        errno = EINVAL; /*set errno, becuse no other function make this*/
         perror("Number of command line arguments must be 2");
         exit(1);
     }
@@ -27,7 +29,7 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    ch_id = atoi(argv[2]); /*not good need to be replace?????????????????????*/
+    ch_id = atoi(argv[2]);
     if (ioctl(fd, MSG_SLOT_CHANNEL, ch_id) != SUCCESS)
     {
         perror("Change channel failed");
@@ -36,7 +38,7 @@ int main(int argc, char *argv[])
  
     /*read the message*/
     message_len = read(fd, message, BUF_LEN);
-    if (message_len < 0) /*what to check?????*/
+    if (message_len < 0)
     {
         perror("Reading failed");
         exit(1);
@@ -48,7 +50,7 @@ int main(int argc, char *argv[])
    if (write(1, message, message_len) != message_len)
    {
        perror("Print to standart output failed");
-        exit(1);
+       exit(1);
    }   
 
     return 0;
