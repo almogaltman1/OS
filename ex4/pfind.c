@@ -194,10 +194,10 @@ int thread_search(void *i)
         curr_thread_node = remove_first(thread_q); /*will be null im queue is empty (if thread didn't went to sleep*/
         curr_path_node = remove_first(dir_q);
         mtx_unlock(&q_lock);
-        if (curr_thread_node != NULL && curr_thread_node->data.index_of_cv_arr != thread_index) /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-        {
-            printf("indexes of thread do not match!, curr is %ld and need to be %ld\n", curr_thread_node->data.index_of_cv_arr, thread_index);
-        }
+        //if (curr_thread_node != NULL && curr_thread_node->data.index_of_cv_arr != thread_index) /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+        //{
+        //    printf("indexes of thread do not match!, curr is %ld and need to be %ld\n", curr_thread_node->data.index_of_cv_arr, thread_index);
+        //}
         free(curr_thread_node); /*we don't need the node anymore*/
         /*take first directory from queue*/
         strcpy(curr_path, curr_path_node->data.path);
