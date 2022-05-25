@@ -230,6 +230,7 @@ int thread_search(void *i)
                     {
                         cnd_signal(&cv_arr[thread_q->first->data.index_of_cv_arr]);
                     }
+                    mtx_unlock(&q_lock);
                     perror("stat failed in seraching");
                     thrd_exit(1);
                 }
