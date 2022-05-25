@@ -200,7 +200,7 @@ int thread_search(void *i)
         }
         free(curr_thread_node); /*we don't need the node anymore*/
         /*take first directory from queue*/
-        stpcpy(curr_path, curr_path_node->data.path);
+        strcpy(curr_path, curr_path_node->data.path);
         //printf("curr path is %s\n", curr_path);
         free(curr_path_node); /*we don't need the node anymore*/
 
