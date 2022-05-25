@@ -224,7 +224,12 @@ int thread_search(void *i)
                 if (stat(new_file_or_dir_path, &curr_stat) != 0)
                 {
                     num_threads_died++;
-
+                    /*check if need to wake some thread instead*/
+                    mtx_lock(&q_lock);
+                    if (thread_q->first != NULL)
+                    {
+                        cnd_signal(&cv_arr[thread_q->first->data.index_of_cv_arr]);
+                    }
                     perror("stat failed in seraching");
                     thrd_exit(1);
                 }
