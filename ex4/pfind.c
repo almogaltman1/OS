@@ -6,13 +6,14 @@
 #include <dirent.h>
 #include <threads.h>
 #include <sys/stat.h>
+#include <stdatomic.h>
 
 
 /*struct of queue node*/
 union data /*only one field from the options*/
 {
     char path[PATH_MAX]; /*for queueNode of dir*/
-    int index_of_cv_arr; /*for queueNode of thread*/
+    long index_of_cv_arr; /*for queueNode of thread*/
 };   
 typedef struct queueNode
 {
@@ -31,18 +32,39 @@ typedef struct queue
 
 /*global vairables*/
 char *search_term = NULL;
-int cnt_files = 0;
+atomic_int cnt_files = 0;
 int num_threads = 0;
 queue *dir_q = NULL;
+queue *thread_q = NULL;
+cnd_t *cv_arr = NULL;
+//cnd_t start_cond;
+atomic_int start_flag = 0; /*need to change??????????????*/
+atomic_int stop_flag = 0;
+//mtx_t start_lock;
+mtx_t q_lock;
+//mtx_t thread_q_lock;
 
 
 /*helper functions*/
 
 /*creates a new node with path and return pointer to it*/
-queueNode *crate_node(union data *data)
+queueNode *crate_path_node(char * path)
 {
     queueNode *node = (queueNode *)malloc(sizeof(queueNode)); /*need to check????????????????*/
-    node->data = *data;
+    union data data;
+    strcpy(data.path, path);
+    node->data = data;
+    node->next = NULL;
+    return node;
+}
+
+/*creates a new node with thread_index and return pointer to it*/
+queueNode *crate_index_node(int index)
+{
+    queueNode *node = (queueNode *)malloc(sizeof(queueNode)); /*need to check????????????????*/
+    union data data;
+    data.index_of_cv_arr = index;
+    node->data = data;
     node->next = NULL;
     return node;
 }
@@ -97,22 +119,167 @@ queueNode *remove_first(queue *q)
 
 }
 
-
-int thread_search(void *q)
+/*free queue*/
+void free_queue(queue *q)
 {
-    queue *dir_q = (queue *)q;
+    while (q->first != NULL)
+    {
+        queueNode *temp = q->first;
+        q->first = temp->next;
+        free(temp);
+    }
+    free(q);
+}
+
+int thread_search(void *i)
+{
+    long thread_index = (long)i;
     queueNode *curr_path_node = NULL, *new_path_node = NULL;
+    queueNode *curr_thread_node = NULL, *new_thread_node = NULL;
     char curr_path[PATH_MAX];
     char new_file_or_dir_path[PATH_MAX];
-    DIR *curr_dir = NULL;
+    DIR *curr_dir = NULL, *check_open = NULL;
     struct dirent *de = NULL;
     struct stat curr_stat;
-    union data data_node;
 
+    //printf("thread %ld is in thread_serach\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+    while (start_flag == 0)
+    {
+        //busy wait, is this good??????
+    }
+    //printf("thread %ld is after busy wait\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+
+    while (1)
+    {
+        mtx_lock(&q_lock);
+        //printf("thread %ld locked\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+        /*go to sleep if direcort queue is empty, or if number of threads waiting >= number of directories.
+        also, check if need to stop sreach*/
+        while ((dir_q->first == NULL /*|| thread_q->len >= dir_q->len*/) && stop_flag ==0)
+        {
+            //printf("thread %ld is inside while\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+            /*check if need to finish, if durecorty queue is empty and all other threads are slipping*/
+            if (dir_q->first == NULL && thread_q->len == num_threads - 1)
+            {
+                //printf("thread %ld wake everyone\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                stop_flag = 1;
+                /*wake all threads*/
+                for (int j = 0; j < num_threads; j++)
+                {
+                    /*we can call cnd_signal also to the current thread, nothing will happen*/
+                    cnd_signal(&cv_arr[j]);
+                }
+                mtx_unlock(&q_lock);
+            }
+            else
+            {
+                //printf("thread %ld go to sleep\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                /*add myself to sleeping threads queue*/
+                new_thread_node = crate_index_node(thread_index);
+                add(thread_q, new_thread_node);
+                cnd_wait(&cv_arr[thread_index], &q_lock);
+                //printf("thread %ld is awake\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+            }
+        }
+        //printf("thread %ld is after inside while\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+        if (stop_flag == 1)
+        {
+            //printf("thread %ld exit\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+            mtx_unlock(&q_lock);
+            thrd_exit(0);
+        }
+
+        /*else, need to remove myself from sleeping threads queue and take first directory for search*/
+        //maybe dosent work if the wrong thread wakes up!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        curr_thread_node = remove_first(thread_q); /*will be null im queue is empty (if thread didn't went to sleep*/
+        curr_path_node = remove_first(dir_q);
+        mtx_unlock(&q_lock);
+        if (curr_thread_node != NULL && curr_thread_node->data.index_of_cv_arr != thread_index) /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+        {
+            printf("indexes of thread do not match!, curr is %ld and need to be %ld\n", curr_thread_node->data.index_of_cv_arr, thread_index);
+        }
+        free(curr_thread_node); /*we don't need the node anymore*/
+        /*take first directory from queue*/
+        stpcpy(curr_path, curr_path_node->data.path);
+        //printf("curr path is %s\n", curr_path);
+        free(curr_path_node); /*we don't need the node anymore*/
+
+
+        /*do saerch*/
+        curr_dir = opendir(curr_path); /*must work, we didn't enter pathes that can't be searched to the queue*/
+        while ((de = readdir(curr_dir)) != NULL)
+        {
+            if ((strcmp(de->d_name, ".") != 0) && (strcmp(de->d_name, "..") != 0)) /*if . or .. we want to ignore*/
+            {
+                //printf("im here 2\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                /*new_file_or_dir_path will be the path of curr dirent,
+                so we want to add / to the end of curr_path and then concatinate the rellevant dirent name avery time*/
+                strcpy(new_file_or_dir_path, curr_path);
+                strcat(new_file_or_dir_path, "/");
+                strcat(new_file_or_dir_path, de->d_name);
+
+                /*get stat of this path*/
+                //printf("im here before stat\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                if (stat(new_file_or_dir_path, &curr_stat) != 0)
+                {
+                    perror("stat failed in seraching\n");
+                    thrd_exit(1);
+                }
+                //printf("im here after stat\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                /*check if dir, and if it is dir if we need to add to the queue (if it serachable)*/
+                if (S_ISDIR(curr_stat.st_mode))
+                {
+                    //printf("im here 3\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                    check_open = opendir(new_file_or_dir_path);
+                    if (check_open != NULL)
+                    {
+                        closedir(check_open);
+                        new_path_node = crate_path_node(new_file_or_dir_path);
+                        mtx_lock(&q_lock);
+                        add(dir_q, new_path_node);
+                        /*wake next thread if exist*/
+                        //printf("thread %ld wakes thread %ld\n", thread_index, thread_q->first->data.index_of_cv_arr); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                        if (thread_q->first != NULL)
+                        {
+                            cnd_signal(&cv_arr[thread_q->first->data.index_of_cv_arr]);
+                        }
+                        mtx_unlock(&q_lock);
+
+                    }
+                    else
+                    {
+                        printf("Directory %s: Permission denied.\n", new_file_or_dir_path);
+                    }
+                    //printf("im here 4\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                }
+                else /*it is a file??????????????????????*/
+                {
+                    //printf("im here 5\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                    /*check if file name contains the searech term*/
+                //sub_string = de->d_name;
+                    //printf("de is %s\n", de->d_name); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                    //printf("st is %s\n", search_term);
+                    if (strstr(de->d_name, search_term) != NULL)
+                    {
+                        cnt_files++;
+                        //printf("thread %ld found %s\n",thread_index ,new_file_or_dir_path); /*!!!!!!!!!!!*/
+                        printf("%s\n" ,new_file_or_dir_path);
+                    }
+                    //printf("im here 6\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                }
+                //printf("im here 7\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                //printf("de is %s\n", de->d_name); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                //printf("im here 8\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+            }
+        }
+        closedir(curr_dir);
+    }
+
+    #if 0
     while (dir_q->first != NULL)
     {
     /*need to wait for all to start!!!!!!!!!!!!!!!!!!!!!!!*/
-    //printf("im here 1\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+    printf("im here 1\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 
     /*check if queue is empty, if wmpty go to sleep*/
     while (dir_q->first == NULL)
@@ -154,8 +321,7 @@ int thread_search(void *q)
                 //printf("im here 3\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
                 if (opendir(new_file_or_dir_path) != NULL)
                 {
-                    strcpy(data_node.path,new_file_or_dir_path);
-                    new_path_node = crate_node(&data_node);
+                    new_path_node = crate_path_node(new_file_or_dir_path);
                     add(dir_q, new_path_node);
                 }
                 else
@@ -186,15 +352,16 @@ int thread_search(void *q)
     closedir(curr_dir);
     }
     thrd_exit(0);
+    #endif
     
 }
 
 int main(int argc, char *argv[])
 {
+    //printf("im inside main\n");
     char *root = NULL;
     DIR* dir = NULL;
     queueNode *root_node = NULL;
-    union data root_data;
     int thread_res;
     int num_errors = 0;
 
@@ -218,24 +385,38 @@ int main(int argc, char *argv[])
     }
     closedir(dir);
 
-    /*create directories queue and enter root path*/
+    /*create directories queue and enter root path.
+    no need of lock, beacuse threads are not created yet*/
     dir_q = create_queue(); /*need to check????????????????*/
-    strcpy(root_data.path, root);
-    root_node = crate_node(&root_data); /*need to check????????????????*/
+    root_node = crate_path_node(root); /*need to check????????????????*/
     add(dir_q, root_node);
+    /*create threads queue*/
+    thread_q = create_queue();
+
+    /*init cv and mutex*/
+    mtx_init(&q_lock, mtx_plain);
+    //mtx_init(&thread_q_lock, mtx_plain);
+    cv_arr = (cnd_t *)calloc(num_threads, sizeof(cnd_t));
+    for (int i = 0; i < num_threads; i++)
+    {
+        cnd_init(&cv_arr[i]);
+    }
 
     /*create threads*/
     /*will change when add multiple threads!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
     int rc;
-    for (int i = 0; i < num_threads; i++)
+    for (long j = 0; j < num_threads; j++)
     {
-        rc = thrd_create(&thread_ids[i], thread_search, (void *)dir_q);
+        rc = thrd_create(&thread_ids[j], thread_search, (void *)j);
         if (rc != thrd_success)
         {
             perror("failed to creat thread in main\n");
             exit(1);
         }
     }
+    /*make start flag 1 so threads can start search*/
+    //printf("3..2..1.. race!!!\n"); /*!!!!!!!!!!!!!!!!!!!*/
+    start_flag = 1;
 
     for (int i = 0; i < num_threads; i++)
     {
@@ -257,8 +438,17 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
-    /*free memory!!!!!!!!!!!!!!!!! free queues, cv array,*/
     /*else, all threads finished with no errors, exit 0*/
-    printf("done\n");
+    /*free memory*/
+    mtx_destroy(&q_lock);
+    for (int i = 0; i < num_threads; i++)
+    {
+        cnd_destroy(&cv_arr[i]);
+    }
+    free(dir_q); /*allways empty when finish*/
+    free_queue(thread_q); /*not allways empty, need to free all nodes*/
+    free(cv_arr);
+
+    //printf("done\n");
     exit(0);
 }
