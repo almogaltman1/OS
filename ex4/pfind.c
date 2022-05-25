@@ -34,6 +34,7 @@ typedef struct queue
 char *search_term = NULL;
 atomic_int cnt_files = 0;
 int num_threads = 0;
+atomic_int num_threads_died = 0;
 queue *dir_q = NULL;
 queue *thread_q = NULL;
 cnd_t *cv_arr = NULL;
@@ -159,7 +160,7 @@ int thread_search(void *i)
         {
             //printf("thread %ld is inside while\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
             /*check if need to finish, if durecorty queue is empty and all other threads are slipping*/
-            if (dir_q->first == NULL && thread_q->len == num_threads - 1)
+            if (dir_q->first == NULL && thread_q->len == num_threads - num_threads_died - 1)
             {
                 //printf("thread %ld wake everyone\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
                 stop_flag = 1;
@@ -222,7 +223,9 @@ int thread_search(void *i)
                 //printf("im here before stat\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
                 if (stat(new_file_or_dir_path, &curr_stat) != 0)
                 {
-                    perror("stat failed in seraching\n");
+                    num_threads_died++;
+
+                    perror("stat failed in seraching");
                     thrd_exit(1);
                 }
                 //printf("im here after stat\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
@@ -380,7 +383,7 @@ int main(int argc, char *argv[])
     dir = opendir(root);
     if (dir == NULL)
     {
-        perror("root directory specified in the arguments can't be searched\n");
+        perror("root directory specified in the arguments can't be searched");
         exit(1);
     }
     closedir(dir);
@@ -410,7 +413,7 @@ int main(int argc, char *argv[])
         rc = thrd_create(&thread_ids[j], thread_search, (void *)j);
         if (rc != thrd_success)
         {
-            perror("failed to creat thread in main\n");
+            perror("failed to creat thread in main");
             exit(1);
         }
     }
