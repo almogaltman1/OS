@@ -9,9 +9,14 @@
 
 
 /*struct of queue node*/
+union data /*only one field from the options*/
+{
+    char path[PATH_MAX]; /*for queueNode of dir*/
+    int index_of_cv_arr; /*for queueNode of thread*/
+};   
 typedef struct queueNode
 {
-    char path[PATH_MAX];
+    union data data;
     struct queueNode *next;
 } queueNode;
 
@@ -34,10 +39,10 @@ queue *dir_q = NULL;
 /*helper functions*/
 
 /*creates a new node with path and return pointer to it*/
-queueNode *crate_node(char *path)
+queueNode *crate_node(union data *data)
 {
     queueNode *node = (queueNode *)malloc(sizeof(queueNode)); /*need to check????????????????*/
-    strcpy(node->path, path);
+    node->data = *data;
     node->next = NULL;
     return node;
 }
@@ -102,6 +107,7 @@ int thread_search(void *q)
     DIR *curr_dir = NULL;
     struct dirent *de = NULL;
     struct stat curr_stat;
+    union data data_node;
 
     while (dir_q->first != NULL)
     {
@@ -115,7 +121,7 @@ int thread_search(void *q)
     }
     /*take first directory from queue*/
     curr_path_node = remove_first(dir_q);
-    stpcpy(curr_path, curr_path_node->path);
+    stpcpy(curr_path, curr_path_node->data.path);
     printf("curr path is %s\n", curr_path);
     free(curr_path_node); /*we don't need the node anymore*/
 
@@ -148,7 +154,8 @@ int thread_search(void *q)
                 //printf("im here 3\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
                 if (opendir(new_file_or_dir_path) != NULL)
                 {
-                    new_path_node = crate_node(new_file_or_dir_path);
+                    strcpy(data_node.path,new_file_or_dir_path);
+                    new_path_node = crate_node(&data_node);
                     add(dir_q, new_path_node);
                 }
                 else
@@ -187,6 +194,7 @@ int main(int argc, char *argv[])
     char *root = NULL;
     DIR* dir = NULL;
     queueNode *root_node = NULL;
+    union data root_data;
     int thread_res;
     int num_errors = 0;
 
@@ -212,7 +220,8 @@ int main(int argc, char *argv[])
 
     /*create directories queue and enter root path*/
     dir_q = create_queue(); /*need to check????????????????*/
-    root_node = crate_node(root); /*need to check????????????????*/
+    strcpy(root_data.path, root);
+    root_node = crate_node(&root_data); /*need to check????????????????*/
     add(dir_q, root_node);
 
     /*create threads*/
