@@ -117,6 +117,22 @@ queueNode *remove_first(queue *q)
     return temp;
 
 }
+/*serach index in threads queue, return 1 if found and 0 if not*/
+int queue_search(queue *q, int index)
+{
+    queueNode *temp = q->first;
+    while (temp != NULL)
+    {
+        if (temp->data.index_of_cv_arr == index)
+        {
+            return 1;
+        }
+        temp = temp->next;
+    }
+    return 0;
+    
+}
+
 
 /*free queue*/
 void free_queue(queue *q)
@@ -171,9 +187,12 @@ int thread_search(void *i)
             else
             {
                 //printf("thread %ld go to sleep\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
-                /*add myself to sleeping threads queue*/
-                new_thread_node = crate_index_node(thread_index);
-                add(thread_q, new_thread_node);
+                /*add myself to sleeping threads queue, check first if already there (if I woke up and didn't pull myself out)*/
+                if (queue_search(thread_q, thread_index) == 0)
+                {
+                    new_thread_node = crate_index_node(thread_index);
+                    add(thread_q, new_thread_node);
+                }
                 cnd_wait(&cv_arr[thread_index], &q_lock);
                 //printf("thread %ld is awake\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
             }
