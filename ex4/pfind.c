@@ -49,7 +49,7 @@ mtx_t q_lock;
 /*creates a new node with path and return pointer to it*/
 queueNode *crate_path_node(char * path)
 {
-    queueNode *node = (queueNode *)malloc(sizeof(queueNode)); /*need to check????????????????*/
+    queueNode *node = (queueNode *)malloc(sizeof(queueNode));
     union data data;
     strcpy(data.path, path);
     node->data = data;
@@ -60,7 +60,7 @@ queueNode *crate_path_node(char * path)
 /*creates a new node with thread_index and return pointer to it*/
 queueNode *crate_index_node(int index)
 {
-    queueNode *node = (queueNode *)malloc(sizeof(queueNode)); /*need to check????????????????*/
+    queueNode *node = (queueNode *)malloc(sizeof(queueNode));
     union data data;
     data.index_of_cv_arr = index;
     node->data = data;
@@ -71,7 +71,7 @@ queueNode *crate_index_node(int index)
 /*creates an empty queue*/
 queue *create_queue()
 {
-    queue *q = (queue *)malloc(sizeof(queue)); /*need to check????????????????*/
+    queue *q = (queue *)malloc(sizeof(queue));
     q->first = NULL;
     q->last = NULL;
     q->len = 0;
@@ -117,22 +117,6 @@ queueNode *remove_first(queue *q)
     return temp;
 
 }
-/*serach index in threads queue, return 1 if found and 0 if not*/
-/*int queue_search(queue *q, int index)
-{
-    queueNode *temp = q->first;
-    while (temp != NULL)
-    {
-        if (temp->data.index_of_cv_arr == index)
-        {
-            return 1;
-        }
-        temp = temp->next;
-    }
-    return 0;
-    
-}*/
-
 
 /*free queue*/
 void free_queue(queue *q)
@@ -159,22 +143,17 @@ int thread_search(void *i)
     struct stat curr_stat;
     int st = 1;
 
-    //printf("thread %ld is in thread_serach\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
     while (start_flag == 0) { /*do not start until main thread say*/ }
-    //printf("thread %ld is after busy wait\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
 
     while (1)
     {
         mtx_lock(&q_lock);
-        //printf("thread %ld locked\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
         /*go to sleep if directory queue is empty. also, check if need to stop sreach*/
         while ((dir_q->first == NULL) && stop_flag == 0)
         {
-            //printf("thread %ld is inside while\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
             /*check if need to finish, if directory queue is empty and all other threads are sleeping*/
             if (dir_q->first == NULL && thread_q->len == num_threads - num_threads_died - 1)
             {
-                //printf("thread %ld wake everyone\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
                 stop_flag = 1;
                 /*wake all threads*/
                 for (int j = 0; j < num_threads; j++)
@@ -186,22 +165,16 @@ int thread_search(void *i)
             }
             else
             {
-                //printf("thread %ld go to sleep\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
-                /*add myself to sleeping threads queue, check first if already there (if I woke up and didn't pull myself out)*/
-                //if (queue_search(thread_q, thread_index) == 0)
-                //{
-                    new_thread_node = crate_index_node(thread_index);
-                    add(thread_q, new_thread_node);
-                //}
+                /*add myself to sleeping threads queue, and go to sleep*/
+                new_thread_node = crate_index_node(thread_index);
+                add(thread_q, new_thread_node);
                 cnd_wait(&cv_arr[thread_index], &q_lock);
-                //printf("thread %ld is awake\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+
                 if (stop_flag == 1)
                 {
-                    //printf("thread %ld exit\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
                     mtx_unlock(&q_lock);
                     thrd_exit(0);
                 }
-
                 /*check if I am first thread, if not wake him and go back to sleep*/
                 while (thread_q->first->data.index_of_cv_arr != thread_index)
                 {
@@ -209,31 +182,24 @@ int thread_search(void *i)
                     cnd_wait(&cv_arr[thread_index], &q_lock);
                     if (stop_flag == 1)
                     {
-                        //printf("thread %ld exit\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
                         mtx_unlock(&q_lock);
                         thrd_exit(0);
                     }
                 }
                 /*I am first, remove myself from queue*/
-                curr_thread_node = remove_first(thread_q); /*will be null if queue is empty (if thread didn't went to sleep)*/
+                curr_thread_node = remove_first(thread_q);
                 free(curr_thread_node); /*we don't need the node anymore*/
             }
         }
-        //printf("thread %ld is after inside while\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
         if (stop_flag == 1)
         {
-            //printf("thread %ld exit\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
             mtx_unlock(&q_lock);
             thrd_exit(0);
         }
 
-        /*else, need to remove myself from sleeping threads queue and take first directory for search*/        
+        /*take first directory node for search*/        
         curr_path_node = remove_first(dir_q);
         mtx_unlock(&q_lock);
-        //if (curr_thread_node != NULL && curr_thread_node->data.index_of_cv_arr != thread_index) /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
-        //{
-        //    printf("indexes of thread do not match!, curr is %ld and need to be %ld\n", curr_thread_node->data.index_of_cv_arr, thread_index);
-        //}
         /*take path from the directory node*/
         strcpy(curr_path, curr_path_node->data.path);
         free(curr_path_node); /*we don't need the node anymore*/
@@ -279,7 +245,6 @@ int thread_search(void *i)
                         /*wake next thread if exist*/
                         if (thread_q->first != NULL)
                         {
-                            //printf("thread %ld wakes thread %ld\n", thread_index, thread_q->first->data.index_of_cv_arr); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
                             cnd_signal(&cv_arr[thread_q->first->data.index_of_cv_arr]);
                         }
                         mtx_unlock(&q_lock);
@@ -296,7 +261,6 @@ int thread_search(void *i)
                     if (strstr(de->d_name, search_term) != NULL)
                     {
                         cnt_files++;
-                        //printf("thread %ld found %s\n",thread_index ,new_file_or_dir_path); /*!!!!!!!!!!!*/
                         printf("%s\n" ,new_file_or_dir_path);
                     }
                 }
@@ -308,7 +272,6 @@ int thread_search(void *i)
 
 int main(int argc, char *argv[])
 {
-    //printf("im inside main\n") /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/;
     char *root = NULL;
     DIR* dir = NULL;
     queueNode *root_node = NULL;
@@ -337,11 +300,11 @@ int main(int argc, char *argv[])
 
     /*create directories queue and enter root path.
     no need of lock, beacuse threads are not created yet*/
-    dir_q = create_queue(); /*need to check????????????????*/
-    root_node = crate_path_node(root); /*need to check????????????????*/
+    dir_q = create_queue();
+    root_node = crate_path_node(root);
     add(dir_q, root_node);
     /*create threads queue*/
-    thread_q = create_queue(); /*need to check????????????????*/
+    thread_q = create_queue();
 
     /*init cv and mutex*/
     mtx_init(&q_lock, mtx_plain);
@@ -364,7 +327,6 @@ int main(int argc, char *argv[])
         }
     }
     /*make start flag 1 so threads can start search*/
-    //printf("3..2..1.. race!!!\n"); /*!!!!!!!!!!!!!!!!!!!*/
     start_flag = 1;
 
     /*wait for all thrreads to finish*/
@@ -377,6 +339,16 @@ int main(int argc, char *argv[])
         }
     }
 
+    /*free memory*/
+    mtx_destroy(&q_lock);
+    for (int i = 0; i < num_threads; i++)
+    {
+        cnd_destroy(&cv_arr[i]);
+    }
+    free_queue(dir_q);
+    free_queue(thread_q);
+    free(cv_arr);
+
     if (num_errors == num_threads) /*all threads have died, just exit with no print*/
     {
         exit(1);
@@ -388,16 +360,5 @@ int main(int argc, char *argv[])
         exit(1);
     }
     /*else, all threads finished with no errors, exit 0*/
-    /*free memory*/
-    mtx_destroy(&q_lock);
-    for (int i = 0; i < num_threads; i++)
-    {
-        cnd_destroy(&cv_arr[i]);
-    }
-    free_queue(dir_q);
-    free_queue(thread_q);
-    free(cv_arr);
-
-    //printf("done\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
     exit(0);
 }
