@@ -168,7 +168,7 @@ int thread_search(void *i)
         mtx_lock(&q_lock);
         //printf("thread %ld locked\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
         /*go to sleep if directory queue is empty. also, check if need to stop sreach*/
-        while ((dir_q->first == NULL) && stop_flag ==0)
+        while ((dir_q->first == NULL) && stop_flag == 0)
         {
             //printf("thread %ld is inside while\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
             /*check if need to finish, if directory queue is empty and all other threads are sleeping*/
@@ -188,13 +188,21 @@ int thread_search(void *i)
             {
                 //printf("thread %ld go to sleep\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
                 /*add myself to sleeping threads queue, check first if already there (if I woke up and didn't pull myself out)*/
-                if (queue_search(thread_q, thread_index) == 0)
-                {
+                //if (queue_search(thread_q, thread_index) == 0)
+                //{
                     new_thread_node = crate_index_node(thread_index);
                     add(thread_q, new_thread_node);
-                }
+                //}
                 cnd_wait(&cv_arr[thread_index], &q_lock);
                 //printf("thread %ld is awake\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                if (stop_flag == 1)
+                {
+                    //printf("thread %ld exit\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                    mtx_unlock(&q_lock);
+                    thrd_exit(0);
+                }
+                curr_thread_node = remove_first(thread_q); /*will be null if queue is empty (if thread didn't went to sleep)*/
+                free(curr_thread_node); /*we don't need the node anymore*/
             }
         }
         //printf("thread %ld is after inside while\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
@@ -205,16 +213,13 @@ int thread_search(void *i)
             thrd_exit(0);
         }
 
-        /*else, need to remove myself from sleeping threads queue and take first directory for search*/
-        //maybe dosent work if the wrong thread wakes up!!!!!!!!!!!!!!!!!!!!!!!!!!!
-        curr_thread_node = remove_first(thread_q); /*will be null if queue is empty (if thread didn't went to sleep)*/
+        /*else, need to remove myself from sleeping threads queue and take first directory for search*/        
         curr_path_node = remove_first(dir_q);
         mtx_unlock(&q_lock);
         //if (curr_thread_node != NULL && curr_thread_node->data.index_of_cv_arr != thread_index) /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
         //{
         //    printf("indexes of thread do not match!, curr is %ld and need to be %ld\n", curr_thread_node->data.index_of_cv_arr, thread_index);
         //}
-        free(curr_thread_node); /*we don't need the node anymore*/
         /*take path from the directory node*/
         strcpy(curr_path, curr_path_node->data.path);
         free(curr_path_node); /*we don't need the node anymore*/
