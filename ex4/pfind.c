@@ -7,6 +7,7 @@
 #include <threads.h>
 #include <sys/stat.h>
 #include <stdatomic.h>
+#include <errno.h>
 
 
 /*struct of queue node*/
@@ -140,6 +141,7 @@ int thread_search(void *i)
     DIR *curr_dir = NULL, *check_open = NULL;
     struct dirent *de = NULL;
     struct stat curr_stat;
+    int st = 1;
 
     //printf("thread %ld is in thread_serach\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
     while (start_flag == 0) { /*do not start until main thread say*/ }
@@ -212,7 +214,8 @@ int thread_search(void *i)
                 strcat(new_file_or_dir_path, de->d_name);
 
                 /*get stat of this path*/
-                if (stat(new_file_or_dir_path, &curr_stat) != 0)
+                st = stat(new_file_or_dir_path, &curr_stat);
+                if (st != 0 && errno != 2) 
                 {
                     num_threads_died++;
                     /*check if need to wake some thread instead*/
@@ -226,7 +229,7 @@ int thread_search(void *i)
                     thrd_exit(1);
                 }
                 /*check if dir, and if it is dir check if we need to add to the queue (if it serachable)*/
-                if (S_ISDIR(curr_stat.st_mode))
+                if (st == 0 && S_ISDIR(curr_stat.st_mode))
                 {
                     check_open = opendir(new_file_or_dir_path);
                     if (check_open != NULL)
