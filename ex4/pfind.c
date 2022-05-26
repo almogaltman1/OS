@@ -148,7 +148,7 @@ int thread_search(void *i)
     while (1)
     {
         mtx_lock(&q_lock);
-        /*go to sleep if directory queue is empty. also, check if need to stop sreach*/
+        /*go to sleep if directory queue is empty. also, check if need to stop search*/
         while ((dir_q->first == NULL) && stop_flag == 0)
         {
             /*check if need to finish, if directory queue is empty and all other threads are sleeping*/
@@ -212,7 +212,7 @@ int thread_search(void *i)
             if ((strcmp(de->d_name, ".") != 0) && (strcmp(de->d_name, "..") != 0)) /*if . or .. we want to ignore*/
             {
                 /*new_file_or_dir_path will be the path of curr dirent,
-                so we want to add / to the end of curr_path and then concatinate the rellevant dirent name avery time*/
+                so we want to add / to the end of curr_path and then concatinate the rellevant dirent name every time*/
                 strcpy(new_file_or_dir_path, curr_path);
                 strcat(new_file_or_dir_path, "/");
                 strcat(new_file_or_dir_path, de->d_name);
@@ -232,7 +232,7 @@ int thread_search(void *i)
                     perror("stat failed in seraching");
                     thrd_exit(1);
                 }
-                /*check if dir, and if it is dir check if we need to add to the queue (if it serachable)*/
+                /*check if dir, and if it is dir check if we need to add to the queue (if it searchable)*/
                 if (st == 0 && S_ISDIR(curr_stat.st_mode))
                 {
                     check_open = opendir(new_file_or_dir_path);
@@ -273,7 +273,7 @@ int thread_search(void *i)
 int main(int argc, char *argv[])
 {
     char *root = NULL;
-    DIR* dir = NULL;
+    DIR *dir = NULL;
     queueNode *root_node = NULL;
     int thread_res;
     int num_errors = 0;
@@ -308,7 +308,6 @@ int main(int argc, char *argv[])
 
     /*init cv and mutex*/
     mtx_init(&q_lock, mtx_plain);
-    //mtx_init(&thread_q_lock, mtx_plain);
     cv_arr = (cnd_t *)calloc(num_threads, sizeof(cnd_t));
     for (int i = 0; i < num_threads; i++)
     {
@@ -329,7 +328,7 @@ int main(int argc, char *argv[])
     /*make start flag 1 so threads can start search*/
     start_flag = 1;
 
-    /*wait for all thrreads to finish*/
+    /*wait for all threads to finish*/
     for (int i = 0; i < num_threads; i++)
     {
         thrd_join(thread_ids[i], &thread_res);
