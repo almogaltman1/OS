@@ -118,7 +118,7 @@ queueNode *remove_first(queue *q)
 
 }
 /*serach index in threads queue, return 1 if found and 0 if not*/
-int queue_search(queue *q, int index)
+/*int queue_search(queue *q, int index)
 {
     queueNode *temp = q->first;
     while (temp != NULL)
@@ -131,7 +131,7 @@ int queue_search(queue *q, int index)
     }
     return 0;
     
-}
+}*/
 
 
 /*free queue*/
@@ -201,6 +201,20 @@ int thread_search(void *i)
                     mtx_unlock(&q_lock);
                     thrd_exit(0);
                 }
+
+                /*check if I am first thread, if not wake him and go back to sleep*/
+                while (thread_q->first->data.index_of_cv_arr != thread_index)
+                {
+                    cnd_signal(&cv_arr[thread_q->first->data.index_of_cv_arr]);
+                    cnd_wait(&cv_arr[thread_index], &q_lock);
+                    if (stop_flag == 1)
+                    {
+                        //printf("thread %ld exit\n", thread_index); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
+                        mtx_unlock(&q_lock);
+                        thrd_exit(0);
+                    }
+                }
+                /*I am first, remove myself from queue*/
                 curr_thread_node = remove_first(thread_q); /*will be null if queue is empty (if thread didn't went to sleep)*/
                 free(curr_thread_node); /*we don't need the node anymore*/
             }
