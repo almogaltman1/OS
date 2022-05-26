@@ -83,7 +83,7 @@ void add(queue *q, queueNode *new_node)
 {
     q->len++;
     /*if q is empty, new node will be first and last*/
-    if (q->last == NULL)
+    if (q->first == NULL)
     {
         q->first = new_node;
         q->last = new_node;
@@ -258,9 +258,9 @@ int thread_search(void *i)
                         mtx_lock(&q_lock);
                         add(dir_q, new_path_node);
                         /*wake next thread if exist*/
-                        //printf("thread %ld wakes thread %ld\n", thread_index, thread_q->first->data.index_of_cv_arr); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
                         if (thread_q->first != NULL)
                         {
+                            //printf("thread %ld wakes thread %ld\n", thread_index, thread_q->first->data.index_of_cv_arr); /*!!!!!!!!!!!!!!!!!!!!!!!!!*/
                             cnd_signal(&cv_arr[thread_q->first->data.index_of_cv_arr]);
                         }
                         mtx_unlock(&q_lock);
