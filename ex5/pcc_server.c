@@ -54,6 +54,12 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    /*set SO_REUSEADDR - from https://stackoverflow.com/questions/24194961/how-do-i-use-setsockoptso-reuseaddr*/
+    if (setsockopt(listenfd, SOL_SOCKET, SO_REUSEADDR, &(int){1}, sizeof(int)) < 0)
+    {
+        perror("set SO_REUSEADDR failed");
+    }
+
     while (1)
     {
         connfd = accept(listenfd, (struct sockaddr*)&peer_addr, &addrsize);
