@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <arpa/inet.h>
 #include <endian.h>
 
@@ -67,7 +68,7 @@ int main(int argc, char *argv[])
                     try_buff + totalsent,
                     notwritten);
       // check if error occured (client closed connection?)
-      assert( nsent >= 0);
+      //assert( nsent >= 0);
       printf("Server: wrote %d bytes\n", nsent);
 
       totalsent  += nsent;
