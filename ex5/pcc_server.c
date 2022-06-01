@@ -162,6 +162,10 @@ int main(int argc, char *argv[])
             exit(1);
         }
 
+        total_bytes_read = 0;
+        curr_bytes_read = 0;
+        bytes_not_read = 0;
+        
         /*receiving N - keep looping until nothing left to read*/
         bytes_not_read = sizeof(uint64_t);
         while (bytes_not_read > 0)
@@ -181,7 +185,7 @@ int main(int argc, char *argv[])
             bytes_not_read -= curr_bytes_read;
         }
         N = be64toh(N);
-        //printf("N is %lu\n", N); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
+        printf("N is %lu\n", N); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 
         /*receiving file content - keep looping until nothing left to read*/
         total_bytes_read = 0;
@@ -220,7 +224,9 @@ int main(int argc, char *argv[])
             //total_bytes_read += curr_bytes_read;
             bytes_not_read -= num_bytes_for_curr_read;
         }
+        printf("finish reading file\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
         free(chunk_of_file_buff);
+        printf("after free\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 
         /*calculate C - number of printable characters*/
         C = calculate_C();
@@ -252,6 +258,7 @@ int main(int argc, char *argv[])
             total_bytes_sent += curr_bytes_sent;
             bytes_not_written -= curr_bytes_sent;
         }
+        printf("finish sending C\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 
         /*update statistics*/
         update_pcc_total();        
@@ -259,9 +266,6 @@ int main(int argc, char *argv[])
         close(connfd);
         /*restart for new connection*/
         connfd = -1;
-        //total_bytes_read = 0;
-        //curr_bytes_read = 0;
-        //bytes_not_read = 0;
     }
     close(listenfd);
     exit_server();
