@@ -23,6 +23,12 @@ int main(int argc, char *argv[])
     int total_bytes_sent = 0;
     int curr_bytes_sent = 0;
     int bytes_not_written = 0;
+    int curr_bytes_read_to_buff = 0;
+    int MB_bytes_not_written = 0;
+    int num_bytes_for_curr_read = 0;
+    int total_bytes_read = 0;
+    int curr_bytes_read = 0;
+    int bytes_not_read = 0;
     char *chunk_of_file_buff = NULL;
     
     
@@ -55,6 +61,7 @@ int main(int argc, char *argv[])
     fseek(fp, 0L, SEEK_END);
     N = ftell(fp);
     fclose(fp);
+
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
     {
@@ -90,7 +97,6 @@ int main(int argc, char *argv[])
 
     curr_bytes_sent = 0;
     bytes_not_written = N;
-    //printf("N is %d\n", bytes_not_written); !!!!!!!!!!!!!!!!!!!!!
     /*open for reading file*/
     fd = open(path_file, O_RDONLY);
     if (fd < 0)
@@ -98,9 +104,9 @@ int main(int argc, char *argv[])
         perror("open file has failed");
         exit(1);
     }
-    int curr_bytes_read_to_buff = 0;
-    int MB_bytes_not_written = 0;
-    int num_bytes_for_curr_read = 0;
+    curr_bytes_read_to_buff = 0;
+    MB_bytes_not_written = 0;
+    num_bytes_for_curr_read = 0;
     /*sending file content, read from file then send to server*/
     while (bytes_not_written > 0)
     {
@@ -133,17 +139,18 @@ int main(int argc, char *argv[])
     free(chunk_of_file_buff);
 
     /*receiving C - keep looping until nothing left to read*/
-    /*maybe change this variables????*/
-    int total_bytes_read = 0;
-    int curr_bytes_read = 0;
-    int bytes_not_read = 0;
+    total_bytes_read = 0;
+    curr_bytes_read = 0;
     bytes_not_read = sizeof(uint64_t);
     while (bytes_not_read > 0)
     {
+        /*similar to recitation:
+        total_bytes_read = how much we've read so far
+        curr_bytes_read = how much we've read in last read() call
+        bytes_not_read =  how much we have left to read*/
         curr_bytes_read = read(sockfd, &C + total_bytes_read, bytes_not_read);
-        if (curr_bytes_read < 0) /*what to do when == 0?*/
+        if (curr_bytes_read < 0)
         {
-            /*need to deal with errors!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
             perror("reading C from server in client failed");
             exit(1);
         }

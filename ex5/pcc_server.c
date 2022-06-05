@@ -66,9 +66,9 @@ uint64_t calculate_C()
 void exit_server()
 {
     for (int i = 32; i < 127; i++)
-        {
-            printf("char '%c' : %lu times\n", i, pcc_total[i]);
-        }
+    {
+        printf("char '%c' : %lu times\n", i, pcc_total[i]);
+    }
     exit(0);
 }
 
@@ -77,15 +77,13 @@ void signal_handler(int signum)
 {
     if (connfd < 0)
     {
-        /*no connection right now, just exit*/
+        /*not connected right now, just exit*/
         exit_server();
     }
 
-    /*else, raise flag so in the end of connection will exit*/
+    /*else, raise flag so at the end of the connection, will exit*/
     stop = 1;
 }
-
-
 
 
 int main(int argc, char *argv[])
@@ -96,6 +94,11 @@ int main(int argc, char *argv[])
     int total_bytes_read = 0;
     int curr_bytes_read = 0;
     int bytes_not_read = 0;
+    int num_bytes_for_curr_read = 0;
+    int MB_bytes_not_read = 0;
+    int total_bytes_sent = 0;
+    int curr_bytes_sent = 0;
+    int bytes_not_written = 0;
     char *chunk_of_file_buff = NULL;
     struct sigaction sig_act = {
         .sa_handler = signal_handler,
@@ -170,10 +173,13 @@ int main(int argc, char *argv[])
         bytes_not_read = sizeof(uint64_t);
         while (bytes_not_read > 0)
         {
+            /*similar to recitation:
+            total_bytes_read = how much we've read so far
+            curr_bytes_read = how much we've read in last read() call
+            bytes_not_read =  how much we have left to read*/
             curr_bytes_read = read(connfd, &N + total_bytes_read, bytes_not_read);
             if (curr_bytes_read <= 0)
             {
-                /*need to deal with errors!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
                 perror("reading N from client in server failed");
                 if (errno != ETIMEDOUT && errno != ECONNRESET && errno != EPIPE)
                 {
@@ -185,16 +191,13 @@ int main(int argc, char *argv[])
             bytes_not_read -= curr_bytes_read;
         }
         N = be64toh(N);
-        printf("N is %lu\n", N); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 
         /*receiving file content - keep looping until nothing left to read*/
         total_bytes_read = 0;
         curr_bytes_read = 0;
         bytes_not_read = N;
-        int num_bytes_for_curr_read = 0;
-        int MB_bytes_not_read = 0;
-        //int MB_curr_bytes_read = 0; !!!!!!!!!!!!!!!!
-        //int MB_total_bytes_read = 0; !!!!!!!!!!!!!!!!!
+        num_bytes_for_curr_read = 0;
+        MB_bytes_not_read = 0;
         ini_arr(pcc_curr, 127);
         while (bytes_not_read > 0)
         {
@@ -208,7 +211,6 @@ int main(int argc, char *argv[])
                 curr_bytes_read = read(connfd, chunk_of_file_buff + total_bytes_read, MB_bytes_not_read);
                 if (curr_bytes_read <= 0)
                 {
-                    /*need to deal with errors!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
                     perror("reading file content from client in server failed");
                     if (errno != ETIMEDOUT && errno != ECONNRESET && errno != EPIPE)
                     {
@@ -221,22 +223,17 @@ int main(int argc, char *argv[])
             }
             /*update pcc_curr with current informatin*/
             update_pcc_cur(chunk_of_file_buff, num_bytes_for_curr_read);
-            //total_bytes_read += curr_bytes_read;
             bytes_not_read -= num_bytes_for_curr_read;
         }
-        printf("finish reading file\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
         free(chunk_of_file_buff);
-        printf("after free\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 
         /*calculate C - number of printable characters*/
         C = calculate_C();
         /*sending C - write like we saw in recition*/
         /*keep looping until nothing left to write*/
         C = htobe64(C);
-        /*maybe change this variables????*/
-        int total_bytes_sent = 0;
-        int curr_bytes_sent = 0;
-        int bytes_not_written = 0;
+        total_bytes_sent = 0;
+        curr_bytes_sent = 0;
         bytes_not_written = sizeof(uint64_t);
         while (bytes_not_written > 0)
         {
@@ -247,7 +244,6 @@ int main(int argc, char *argv[])
             curr_bytes_sent = write(connfd, &C + total_bytes_sent, bytes_not_written);
             if (curr_bytes_sent <= 0)
             {
-               /*need to deal with errors!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
                 perror("writng C from server to client failed");
                 if (errno != ETIMEDOUT && errno != ECONNRESET && errno != EPIPE)
                 {
@@ -258,7 +254,6 @@ int main(int argc, char *argv[])
             total_bytes_sent += curr_bytes_sent;
             bytes_not_written -= curr_bytes_sent;
         }
-        printf("finish sending C\n"); /*!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/
 
         /*update statistics*/
         update_pcc_total();        
